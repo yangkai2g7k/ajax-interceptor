@@ -9,8 +9,9 @@ let ajax_interceptor_qoweifjqon = {
   myXHR: function() {
     let pageScriptEventDispatched = false;
     const modifyResponse = () => {
-      ajax_interceptor_qoweifjqon.settings.ajaxInterceptor_rules.forEach(({match, overrideTxt = ''}) => {
-        if (match && this.responseURL.indexOf(match) > -1) {
+      ajax_interceptor_qoweifjqon.settings.ajaxInterceptor_rules.forEach(({regexMatch, overrideTxt = ''}) => {
+
+        if (regexMatch && this.responseURL.match(regexMatch)) {
           this.responseText = overrideTxt;
           this.response = overrideTxt;
           
@@ -75,8 +76,8 @@ let ajax_interceptor_qoweifjqon = {
   myFetch: function(...args) {
     return ajax_interceptor_qoweifjqon.originalFetch(...args).then((response) => {
       let txt = undefined;
-      ajax_interceptor_qoweifjqon.settings.ajaxInterceptor_rules.forEach(({match, overrideTxt = ''}) => {
-        if (match && response.url.indexOf(match) > -1) {
+      ajax_interceptor_qoweifjqon.settings.ajaxInterceptor_rules.forEach(({regexMatch, overrideTxt = ''}) => {
+        if (regexMatch && response.url.match(regexMatch)) {
           window.dispatchEvent(new CustomEvent("pageScript", {
             detail: {url: response.url, match}
           }));
