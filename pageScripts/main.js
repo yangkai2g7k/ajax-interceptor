@@ -1,150 +1,68 @@
-
 // 命名空间
+import ah from "ajax-hook";
 let ajax_interceptor_qoweifjqon = {
-  settings: {
-    ajaxInterceptor_switchOn: false,
-    ajaxInterceptor_rules: [],
-  },
-  originalXHR: window.XMLHttpRequest,
-  myXHR: function() {
-    let pageScriptEventDispatched = false;
-    const modifyResponse = () => {
-      ajax_interceptor_qoweifjqon.settings.ajaxInterceptor_rules.forEach(({regexMatch, overrideTxt = ''}) => {
 
-        if (regexMatch && this.responseURL.match(regexMatch)) {
-          this.responseText = overrideTxt;
-          this.response = overrideTxt;
-          
-          if (!pageScriptEventDispatched) {
-            window.dispatchEvent(new CustomEvent("pageScript", {
-              detail: {url: this.responseURL, match}
-            }));
-            pageScriptEventDispatched = true;
-          }
+    settings: {
+        ajaxInterceptor_switchOn: false,
+        ajaxInterceptor_rules: [],
+    },
+    queuedRequest: {},
+    matchRequest: (sourceMethod, sourceUrl, targetMethod, targetUrl) => {
+        if (!sourceMethod || !sourceUrl || !targetMethod || !targetUrl) {
+            return false;
         }
-      })
-    }
-    
-    const xhr = new ajax_interceptor_qoweifjqon.originalXHR;
-    for (let attr in xhr) {
-      if (attr === 'onreadystatechange') {
-        xhr.onreadystatechange = (...args) => {
-          if (this.readyState == 4) {
-            // 请求成功
-            if (ajax_interceptor_qoweifjqon.settings.ajaxInterceptor_switchOn) {
-              // 开启拦截
-              modifyResponse();
-            }
-          }
-          this.onreadystatechange && this.onreadystatechange.apply(this, args);
+        if (sourceMethod.toUpperCase() !== targetMethod.toUpperCase()) {
+            return false;
         }
-        continue;
-      } else if (attr === 'onload') {
-        xhr.onload = (...args) => {
-          // 请求成功
-          if (ajax_interceptor_qoweifjqon.settings.ajaxInterceptor_switchOn) {
-            // 开启拦截
-            modifyResponse();
-          }
-          this.onload && this.onload.apply(this, args);
-        }
-        continue;
-      }
-  
-      if (typeof xhr[attr] === 'function') {
-        this[attr] = xhr[attr].bind(xhr);
-      } else {
-        // responseText和response不是writeable的，但拦截时需要修改它，所以修改就存储在this[`_${attr}`]上
-        if (attr === 'responseText' || attr === 'response') {
-          Object.defineProperty(this, attr, {
-            get: () => this[`_${attr}`] == undefined ? xhr[attr] : this[`_${attr}`],
-            set: (val) => this[`_${attr}`] = val,
-            enumerable: true
-          });
+        return sourceUrl.indexOf(targetUrl) > -1;
+    },
+    onresponse: (xhr) => {
+        let rule = ajax_interceptor_qoweifjqon.settings.ajaxInterceptor_rules.find((element) => {
+            return ajax_interceptor_qoweifjqon.matchRequest(arg[0], arg[1], element.method, element.url) && element.type === "response";
+        });
+        if(rule === undefined)
+            return;
+        xhr.responseText = rule.content;
+    },
+    open: (arg, xhr) => {
+        let rule = ajax_interceptor_qoweifjqon.settings.ajaxInterceptor_rules.find((element) => {
+            return ajax_interceptor_qoweifjqon.matchRequest(arg[0], arg[1], element.method, element.url) && element.type === "request";
+        });
+        if(rule === undefined)
+            return false;
+        if(rule.time in ajax_interceptor_qoweifjqon.queuedRequest){
+            ajax_interceptor_qoweifjqon.queuedRequest[rule.time].push(xhr);
         } else {
-          Object.defineProperty(this, attr, {
-            get: () => xhr[attr],
-            set: (val) => xhr[attr] = val,
-            enumerable: true
-          });
+            ajax_interceptor_qoweifjqon.queuedRequest[rule.time] = xhr;
         }
-      }
+    },
+    setupTimer: () => {
+        for(let time in ajax_interceptor_qoweifjqon.queuedRequest) {
+            if(Date.parse(time) >= Date.now()){
+                for(let xhr of ajax_interceptor_qoweifjqon.queuedRequest[time]){
+                    xhr.send();
+                }
+                ajax_interceptor_qoweifjqon.queuedRequest[time] = [];
+            }
+        }
     }
-  },
+};
 
-  originalFetch: window.fetch.bind(window),
-  myFetch: function(...args) {
-    return ajax_interceptor_qoweifjqon.originalFetch(...args).then((response) => {
-      let txt = undefined;
-      ajax_interceptor_qoweifjqon.settings.ajaxInterceptor_rules.forEach(({regexMatch, overrideTxt = ''}) => {
-        if (regexMatch && response.url.match(regexMatch)) {
-          window.dispatchEvent(new CustomEvent("pageScript", {
-            detail: {url: response.url, match}
-          }));
-          txt = overrideTxt;
-        }
-      });
 
-      if (txt !== undefined) {
-        const stream = new ReadableStream({
-          start(controller) {
-            const bufView = new Uint8Array(new ArrayBuffer(txt.length));
-            for (var i = 0; i < txt.length; i++) {
-              bufView[i] = txt.charCodeAt(i);
-            }
-  
-            controller.enqueue(bufView);
-            controller.close();
-          }
+window.addEventListener("message", function (event) {
+    const data = event.data;
+    if (data.type === 'ajaxInterceptor' && data.to === 'pageScript') {
+        ajax_interceptor_qoweifjqon.settings[data.key] = data.value;
+    }
+
+    if (ajax_interceptor_qoweifjqon.settings.ajaxInterceptor_switchOn) {
+        ah.hookAjax({
+            open: ajax_interceptor_qoweifjqon.open,
+            onload:  ajax_interceptor_qoweifjqon.onresponse,
+            onreadystatechange: ajax_interceptor_qoweifjqon.onresponse,
         });
-  
-        const newResponse = new Response(stream, {
-          headers: response.headers,
-          status: response.status,
-          statusText: response.statusText,
-        });
-        const proxy = new Proxy(newResponse, {
-          get: function(target, name){
-            switch(name) {
-              case 'ok':
-              case 'redirected':
-              case 'type':
-              case 'url':
-              case 'useFinalURL':
-              case 'body':
-              case 'bodyUsed':
-                return response[name];
-            }
-            return target[name];
-          }
-        });
-  
-        for (let key in proxy) {
-          if (typeof proxy[key] === 'function') {
-            proxy[key] = proxy[key].bind(newResponse);
-          }
-        }
-  
-        return proxy;
-      } else {
-        return response;
-      }
-    });
-  },
-}
-
-
-window.addEventListener("message", function(event) {
-  const data = event.data;
-  if (data.type === 'ajaxInterceptor' && data.to === 'pageScript') {
-    ajax_interceptor_qoweifjqon.settings[data.key] = data.value;
-  }
-
-  if (ajax_interceptor_qoweifjqon.settings.ajaxInterceptor_switchOn) {
-    window.XMLHttpRequest = ajax_interceptor_qoweifjqon.myXHR;
-    window.fetch = ajax_interceptor_qoweifjqon.myFetch;
-  } else {
-    window.XMLHttpRequest = ajax_interceptor_qoweifjqon.originalXHR;
-    window.fetch = ajax_interceptor_qoweifjqon.originalFetch;
-  }
+        setInterval(ajax_interceptor_qoweifjqon.setupTimer, 50);
+    } else {
+        ah.unHookAjax();
+    }
 }, false);

@@ -1,5 +1,5 @@
 {
-  "name": "Ajax Interceptor",
+  "name": "Ajax Interceptor Test",
   "version": "0.5",
   "description": "To modify response text of ajax requests",
   "permissions": [
@@ -36,7 +36,7 @@
   ],
   "web_accessible_resources": [
     "pageScripts/defaultSettings.js",
-    "pageScripts/main.js",
+    "pageScripts/bundle.js",
     "iframe.css",
     "iframe/index.html"
   ]
