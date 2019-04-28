@@ -23,12 +23,12 @@ const buildUUID = () => {
 export default class Main extends Component {
     constructor() {
         super();
-        chrome.runtime.onMessage.addListener(({type, to, url, match}) => {
+        chrome.runtime.onMessage.addListener(({type, to, url, key}) => {
             if (type === 'ajaxInterceptor' && to === 'iframe') {
                 const {interceptedRequests} = this.state;
-                if (!interceptedRequests[match]) interceptedRequests[match] = [];
+                if (!interceptedRequests[key]) interceptedRequests[key] = [];
 
-                const exits = interceptedRequests[match].some(obj => {
+                const exits = interceptedRequests[key].some(obj => {
                     if (obj.url === url) {
                         obj.num++;
                         return true;
@@ -37,7 +37,7 @@ export default class Main extends Component {
                 });
 
                 if (!exits) {
-                    interceptedRequests[match].push({url, num: 1});
+                    interceptedRequests[key].push({url, num: 1});
                 }
                 this.setState({interceptedRequests}, () => {
                     if (!exits) {
@@ -115,20 +115,20 @@ export default class Main extends Component {
         window.setting.ajaxInterceptor_rules[i].time = time;
         this.set('ajaxInterceptor_rules', window.setting.ajaxInterceptor_rules);
 
-        // this.forceUpdateDebouce();
-        this.forceUpdate();
+        this.forceUpdateDebouce();
+        // this.forceUpdate();
     }
 
     handleTypeChange = (type, i) => {
         window.setting.ajaxInterceptor_rules[i].type = type;
         this.set('ajaxInterceptor_rules', window.setting.ajaxInterceptor_rules);
-        this.forceUpdate();
+        this.forceUpdateDebouce();
     }
 
     handleMethodChange = (method, i) => {
         window.setting.ajaxInterceptor_rules[i].method = method;
         this.set('ajaxInterceptor_rules', window.setting.ajaxInterceptor_rules);
-        this.forceUpdate();
+        this.forceUpdateDebouce();
     }
 
     handleClickAdd = () => {
@@ -145,7 +145,7 @@ export default class Main extends Component {
     handleClickRemove = (e, i) => {
         e.stopPropagation();
         const {interceptedRequests} = this.state;
-        const match = window.setting.ajaxInterceptor_rules[i].match;
+        const key = window.setting.ajaxInterceptor_rules[i].key;
 
         window.setting.ajaxInterceptor_rules = [
             ...window.setting.ajaxInterceptor_rules.slice(0, i),
@@ -153,7 +153,7 @@ export default class Main extends Component {
         ];
         this.set('ajaxInterceptor_rules', window.setting.ajaxInterceptor_rules);
 
-        delete interceptedRequests[match];
+        delete interceptedRequests[key];
         this.setState({interceptedRequests}, this.updateAddBtnTop_interval);
     }
 
@@ -182,14 +182,18 @@ export default class Main extends Component {
                                     <Panel
                                         key={key}
                                         header={
-                                            <div className="panel-header">
-                                                <Select defaultValue={type} style={{width: 120}}
-                                                        onChange={value => this.handleTypeChange(value, i)}>
+                                            <div className="panel-header" onClick={e => e.stopPropagation()}>
+                                                <Select defaultValue={type}
+                                                        onChange={value => this.handleTypeChange(value, i)}
+                                                        style={{width: '120px', marginRight: '10px'}}
+                                                >
                                                     <Option value="request">Request</Option>
                                                     <Option value="response">Response</Option>
                                                 </Select>
-                                                <Select defaultValue={method} style={{width: 120}}
-                                                        onChange={value => this.handleMethodChange(value, i)}>
+                                                <Select defaultValue={method}
+                                                        onChange={value => this.handleMethodChange(value, i)}
+                                                        style={{width: '100px', marginRight: '10px'}}
+                                                >
                                                     <Option value="post">Post</Option>
                                                     <Option value="get">Get</Option>
                                                     <Option value="put">Put</Option>
@@ -198,9 +202,8 @@ export default class Main extends Component {
                                                 </Select>
                                                 <Input
                                                     placeholder="URL Filter"
-                                                    style={{width: '79%'}}
+                                                    style={{width: '230px'}}
                                                     defaultValue={match}
-                                                    onClick={e => e.stopPropagation()}
                                                     onChange={e => this.handleMatchChange(e, i)}
                                                 />
                                                 <Button
@@ -208,7 +211,7 @@ export default class Main extends Component {
                                                     shape="circle"
                                                     icon="minus"
                                                     onClick={e => this.handleClickRemove(e, i)}
-                                                    style={{marginLeft: '4.5%'}}
+                                                    style={{marginLeft: '10px'}}
                                                 />
                                             </div>
                                         }
@@ -226,13 +229,13 @@ export default class Main extends Component {
                                             <TimePicker value={time} onChange={value => this.handleTimeChange(value, i)} />
                                         }
 
-                                        {this.state.interceptedRequests[match] && (
+                                        {this.state.interceptedRequests[key] && (
                                             <>
                                                 <div className="intercepted-requests">
                                                     Intercepted Requests:
                                                 </div>
                                                 <div className="intercepted">
-                                                    {this.state.interceptedRequests[match] && this.state.interceptedRequests[match].map(({url, num}) => (
+                                                    {this.state.interceptedRequests[key] && this.state.interceptedRequests[key].map(({url, num}) => (
                                                         <Tooltip placement="top" title={url} key={url}>
                                                             <Badge
                                                                 count={num}
