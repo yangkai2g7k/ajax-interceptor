@@ -1,7 +1,7 @@
 import React, {Component} from 'react';
 import 'antd/dist/antd.css';
 import {Switch, Collapse, Input, Button, Badge, Tooltip, TimePicker, Select} from 'antd';
-
+import moment from 'moment';
 const Panel = Collapse.Panel;
 const Option = Select.Option;
 
@@ -112,7 +112,7 @@ export default class Main extends Component {
     }
 
     handleTimeChange = (time, i) => {
-        window.setting.ajaxInterceptor_rules[i].time = time;
+        window.setting.ajaxInterceptor_rules[i].time = time.format('HH:mm:ss');
         this.set('ajaxInterceptor_rules', window.setting.ajaxInterceptor_rules);
 
         this.forceUpdateDebouce();
@@ -137,7 +137,7 @@ export default class Main extends Component {
             key: buildUUID(),
             type: "request",
             method:"post",
-            time: ""
+            time: moment().format('HH:mm:ss')
         });
         this.forceUpdate(this.updateAddBtnTop_interval);
     }
@@ -162,6 +162,7 @@ export default class Main extends Component {
     }
 
     render() {
+        console.log(window.setting.ajaxInterceptor_rules);
         return (
             <div className="main">
                 <Switch
@@ -226,7 +227,7 @@ export default class Main extends Component {
                                         }
                                         {
                                             type === "request" &&
-                                            <TimePicker value={time} onChange={value => this.handleTimeChange(value, i)} />
+                                            <TimePicker value={moment(time, "HH:mm:ss")} onChange={value => this.handleTimeChange(value, i)} />
                                         }
 
                                         {this.state.interceptedRequests[key] && (

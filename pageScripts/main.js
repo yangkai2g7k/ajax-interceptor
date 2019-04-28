@@ -18,30 +18,38 @@ let ajax_interceptor_qoweifjqon = {
     },
     onresponse: (xhr) => {
         let rule = ajax_interceptor_qoweifjqon.settings.ajaxInterceptor_rules.find((element) => {
-            return ajax_interceptor_qoweifjqon.matchRequest(arg[0], arg[1], element.method, element.url) && element.type === "response";
+            return ajax_interceptor_qoweifjqon.matchRequest(arg[0], arg[1], element.method, element.match) && element.type === "response";
         });
         if(rule === undefined)
             return;
         xhr.responseText = rule.content;
     },
     open: (arg, xhr) => {
+        xhr.method = arg[0];
+        xhr.url = arg[1];
+        return false;
+    },
+    send: (arg, xhr) => {
+        console.log("intercept request method:%s,url:%s",xhr.method, xhr.url);
         let rule = ajax_interceptor_qoweifjqon.settings.ajaxInterceptor_rules.find((element) => {
-            return ajax_interceptor_qoweifjqon.matchRequest(arg[0], arg[1], element.method, element.url) && element.type === "request";
+            return ajax_interceptor_qoweifjqon.matchRequest(xhr.method, xhr.url, element.method, element.match) && element.type === "request";
         });
         if(rule === undefined)
             return false;
+        console.log("intercept request method:%s,url:%s",xhr.method, xhr.url);
         if(rule.time in ajax_interceptor_qoweifjqon.queuedRequest){
             ajax_interceptor_qoweifjqon.queuedRequest[rule.time].push(xhr);
         } else {
             ajax_interceptor_qoweifjqon.queuedRequest[rule.time] = xhr;
         }
+        return true;
     },
     setupTimer: () => {
         for(let time in ajax_interceptor_qoweifjqon.queuedRequest) {
             if(Date.parse(time) >= Date.now()){
-                for(let xhr of ajax_interceptor_qoweifjqon.queuedRequest[time]){
+                ajax_interceptor_qoweifjqon.queuedRequest[time].reverse().forEach(xhr => {
                     xhr.send();
-                }
+                });
                 ajax_interceptor_qoweifjqon.queuedRequest[time] = [];
             }
         }
@@ -58,6 +66,7 @@ window.addEventListener("message", function (event) {
     if (ajax_interceptor_qoweifjqon.settings.ajaxInterceptor_switchOn) {
         ah.hookAjax({
             open: ajax_interceptor_qoweifjqon.open,
+            send: ajax_interceptor_qoweifjqon.send,
             onload:  ajax_interceptor_qoweifjqon.onresponse,
             onreadystatechange: ajax_interceptor_qoweifjqon.onresponse,
         });
