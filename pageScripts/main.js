@@ -1,5 +1,7 @@
 // 命名空间
 import ah from "ajax-hook";
+import moment from "moment";
+
 let ajax_interceptor_qoweifjqon = {
 
     settings: {
@@ -40,17 +42,19 @@ let ajax_interceptor_qoweifjqon = {
         if(rule.time in ajax_interceptor_qoweifjqon.queuedRequest){
             ajax_interceptor_qoweifjqon.queuedRequest[rule.time].push(xhr);
         } else {
-            ajax_interceptor_qoweifjqon.queuedRequest[rule.time] = xhr;
+            ajax_interceptor_qoweifjqon.queuedRequest[rule.time] = [xhr];
         }
         return true;
     },
     setupTimer: () => {
         for(let time in ajax_interceptor_qoweifjqon.queuedRequest) {
-            if(Date.parse(time) >= Date.now()){
+            if(moment().isSameOrAfter(moment(time, "HH:mm:ss"))){
+                console.log("after time", time);
                 ajax_interceptor_qoweifjqon.queuedRequest[time].reverse().forEach(xhr => {
+                    console.log("send request", xhr);
                     xhr.send();
                 });
-                ajax_interceptor_qoweifjqon.queuedRequest[time] = [];
+                delete ajax_interceptor_qoweifjqon.queuedRequest[time];
             }
         }
     }

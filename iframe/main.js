@@ -112,7 +112,7 @@ export default class Main extends Component {
     }
 
     handleTimeChange = (time, i) => {
-        window.setting.ajaxInterceptor_rules[i].time = time.format('HH:mm:ss');
+        window.setting.ajaxInterceptor_rules[i].time = time.format("HH:mm:ss");
         this.set('ajaxInterceptor_rules', window.setting.ajaxInterceptor_rules);
 
         this.forceUpdateDebouce();
@@ -137,7 +137,7 @@ export default class Main extends Component {
             key: buildUUID(),
             type: "request",
             method:"post",
-            time: moment().format('HH:mm:ss')
+            time: moment().format("HH:mm:ss")
         });
         this.forceUpdate(this.updateAddBtnTop_interval);
     }

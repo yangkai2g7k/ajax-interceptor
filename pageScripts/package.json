@@ -9,7 +9,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "ajax-hook": "^1.8.3"
+    "ajax-hook": "^1.8.3",
+    "moment": "^2.24.0"
   },
   "devDependencies": {
     "webpack": "^4.30.0"
