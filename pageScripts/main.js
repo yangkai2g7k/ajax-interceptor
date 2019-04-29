@@ -19,12 +19,20 @@ let ajax_interceptor_qoweifjqon = {
         return sourceUrl.indexOf(targetUrl) > -1;
     },
     onresponse: (xhr) => {
+        console.log("intercept response method:%s,url:%s",xhr.method, xhr.url);
         let rule = ajax_interceptor_qoweifjqon.settings.ajaxInterceptor_rules.find((element) => {
-            return ajax_interceptor_qoweifjqon.matchRequest(arg[0], arg[1], element.method, element.match) && element.type === "response";
+            return ajax_interceptor_qoweifjqon.matchRequest(xhr.method, xhr.url, element.method, element.match) && element.type === "response";
         });
         if(rule === undefined)
             return;
-        xhr.responseText = rule.content;
+        window.dispatchEvent(new CustomEvent("pageScript", {
+            detail: {
+                url: rule.match,
+                key: rule.key,
+            }
+        }));
+        console.log("intercept response method:%s,url:%s",xhr.method, xhr.url);
+        xhr.responseText = rule.overrideTxt;
     },
     open: (arg, xhr) => {
         xhr.method = arg[0];
@@ -32,13 +40,19 @@ let ajax_interceptor_qoweifjqon = {
         return false;
     },
     send: (arg, xhr) => {
-        console.log("intercept request method:%s,url:%s",xhr.method, xhr.url);
+        // console.log("intercept request method:%s,url:%s",xhr.method, xhr.url);
         let rule = ajax_interceptor_qoweifjqon.settings.ajaxInterceptor_rules.find((element) => {
             return ajax_interceptor_qoweifjqon.matchRequest(xhr.method, xhr.url, element.method, element.match) && element.type === "request";
         });
         if(rule === undefined)
             return false;
         console.log("intercept request method:%s,url:%s",xhr.method, xhr.url);
+        window.dispatchEvent(new CustomEvent("pageScript", {
+            detail: {
+                url: rule.match,
+                key: rule.key,
+            }
+        }));
         if(rule.time in ajax_interceptor_qoweifjqon.queuedRequest){
             ajax_interceptor_qoweifjqon.queuedRequest[rule.time].push(xhr);
         } else {
